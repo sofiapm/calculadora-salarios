@@ -4,7 +4,10 @@ const $ = id => document.getElementById(id);
 let currentContract = 'dependente';
 let currentDirection = 'gross-to-net';
 let currentView = 'detailed';
+let currentLang = 'pt';
 let hasResults = false;
+let lastResult = null;
+let lastResultType = null;
 let travelMode = 'auto';
 let travelEntries = [];
 
@@ -45,6 +48,10 @@ function initToggles() {
   setupToggle('view-toggle', v => {
     currentView = v;
     if (hasResults) showView(v);
+  });
+  setupToggle('lang-toggle', v => {
+    currentLang = v;
+    if (hasResults && lastResult) reRender();
   });
   setupToggle('travel-mode-toggle', v => {
     travelMode = v;
@@ -154,131 +161,218 @@ function badge(label, value) {
   return '<div class="badge"><small>' + label + '</small><strong>' + value + '</strong></div>';
 }
 
+// --- i18n labels ---
+
+var L = {
+  pt: {
+    grossCard: 'Bruto Mensal', netCard: 'Liquido Mensal',
+    gross: 'Salario bruto', ss11: 'Seguranca Social (11%)', irs: 'IRS',
+    netBase: 'Liquido base', mealSub: 'Sub. Alimentacao', transportSub: 'Sub. Transporte',
+    totalNetMonthly: 'Total Liquido Mensal',
+    grossAnnual: 'Rendimento bruto', ssEmployee: 'SS anual (trabalhador)',
+    irsAnnual: 'IRS anual', jovemDiscount: 'Desconto IRS Jovem',
+    netAnnualBase: 'Liquido anual (base)', months: 'meses',
+    totalNetAnnual: 'Total Liquido Anual',
+    employerTitle: 'Custo Empresa', grossAnnualLabel: 'Salario bruto anual',
+    ssEmployer: 'SS empresa (23,75%)', mealAnnual: 'Sub. Alimentacao anual',
+    transportAnnual: 'Sub. Transporte anual',
+    totalCostAnnual: 'Custo Total Anual', totalCostMonthly: 'Custo Total Mensal (media)',
+    monthlyTitle: 'Decomposicao Mensal', annualTitle: 'Resumo Anual',
+    ratesTitle: 'Taxas Efetivas', irsEffective: 'IRS Efetiva',
+    card: 'Cartao', cash: 'Dinheiro',
+    mealNote: 'Alimentacao', travelNote: 'Deslocacao', perDay: '/dia', national: 'nacional',
+    // Independente
+    invoicing: 'Faturacao mensal', invoicingAnnual: 'Faturacao anual (12 meses)',
+    taxableIncome: 'Rendimento tributavel (75%)', ss: 'Seguranca Social',
+    ssAnnual: 'SS anual', netMonthly: 'Liquido Mensal', netAnnual: 'Liquido Anual',
+  },
+  en: {
+    grossCard: 'Gross Monthly', netCard: 'Net Monthly',
+    gross: 'Gross salary', ss11: 'Social Security (11%)', irs: 'Income Tax',
+    netBase: 'Net base', mealSub: 'Meal Allowance', transportSub: 'Transport Allowance',
+    totalNetMonthly: 'Total Net Monthly',
+    grossAnnual: 'Gross income', ssEmployee: 'SS annual (employee)',
+    irsAnnual: 'Income Tax annual', jovemDiscount: 'Youth Tax Discount',
+    netAnnualBase: 'Net annual (base)', months: 'months',
+    totalNetAnnual: 'Total Net Annual',
+    employerTitle: 'Employer Cost', grossAnnualLabel: 'Gross annual salary',
+    ssEmployer: 'SS employer (23.75%)', mealAnnual: 'Meal Allowance annual',
+    transportAnnual: 'Transport Allowance annual',
+    totalCostAnnual: 'Total Annual Cost', totalCostMonthly: 'Total Monthly Cost (avg)',
+    monthlyTitle: 'Monthly Breakdown', annualTitle: 'Annual Summary',
+    ratesTitle: 'Effective Rates', irsEffective: 'Income Tax Eff.',
+    card: 'Card', cash: 'Cash',
+    mealNote: 'Meal', travelNote: 'Travel', perDay: '/day', national: 'national',
+    // Independente
+    invoicing: 'Monthly invoicing', invoicingAnnual: 'Annual invoicing (12 months)',
+    taxableIncome: 'Taxable income (75%)', ss: 'Social Security',
+    ssAnnual: 'SS annual', netMonthly: 'Net Monthly', netAnnual: 'Net Annual',
+  }
+};
+
+function t(key) { return L[currentLang][key] || L.pt[key] || key; }
+
+// --- Re-render on lang change ---
+
+function reRender() {
+  if (!lastResult) return;
+  if (lastResultType === 'dependente') {
+    renderDepDetailed(lastResult);
+    renderDepSimple(lastResult);
+  } else {
+    renderIndDetailed(lastResult);
+    renderIndSimple(lastResult);
+  }
+}
+
 // --- Render: Trabalho Dependente ---
 
 function renderDepDetailed(r) {
+  $('card-gross-label').textContent = t('grossCard');
+  $('card-net-label').textContent = t('netCard');
+  $('h-monthly').textContent = t('monthlyTitle');
+  $('h-annual').textContent = t('annualTitle');
+  $('h-employer').textContent = t('employerTitle');
+  $('h-rates').textContent = t('ratesTitle');
+
   $('res-gross').textContent = fmt(r.grossMonthlyEff);
   $('res-net').textContent = fmt(r.totalNetMonthly);
 
+  const mealLabel = r.mealType === 'card' ? t('card') : t('cash');
   let html = '';
-  html += row('Salario bruto', fmt(r.grossMonthlyEff));
-  html += row('Seguranca Social (11%)', '- ' + fmt(r.ssMonthly), 'deduction');
-  html += row('IRS', '- ' + fmt(r.irsMonthly), 'deduction');
-  html += row('Liquido base', fmt(r.netMonthlyBase), 'subtotal');
-  const mealLabel = r.mealType === 'card' ? 'Cartao' : 'Dinheiro';
+  html += row(t('gross'), fmt(r.grossMonthlyEff));
+  html += row(t('ss11'), '- ' + fmt(r.ssMonthly), 'deduction');
+  html += row(t('irs'), '- ' + fmt(r.irsMonthly), 'deduction');
+  html += row(t('netBase'), fmt(r.netMonthlyBase), 'subtotal');
   if (r.mealMonthlyClean > 0)
-    html += row('Sub. Alimentacao (' + mealLabel + ')', '+ ' + fmt(r.mealMonthlyClean), 'addition');
+    html += row(t('mealSub') + ' (' + mealLabel + ')', '+ ' + fmt(r.mealMonthlyClean), 'addition');
   if (r.transportMonthly > 0)
-    html += row('Sub. Transporte', '+ ' + fmt(r.transportMonthly), 'addition');
-  html += row('<strong>Total Liquido Mensal</strong>', '<strong>' + fmt(r.totalNetMonthly) + '</strong>');
+    html += row(t('transportSub'), '+ ' + fmt(r.transportMonthly), 'addition');
+  html += row('<strong>' + t('totalNetMonthly') + '</strong>', '<strong>' + fmt(r.totalNetMonthly) + '</strong>');
   $('tbl-monthly').innerHTML = html;
 
   html = '';
-  html += row('Rendimento bruto (' + r.subsidyMode + ' meses)', fmt(r.grossAnual));
-  html += row('SS anual (trabalhador)', '- ' + fmt(r.ssAnualEmp), 'deduction');
-  html += row('IRS anual', '- ' + fmt(r.irs), 'deduction');
+  html += row(t('grossAnnual') + ' (' + r.subsidyMode + ' ' + t('months') + ')', fmt(r.grossAnual));
+  html += row(t('ssEmployee'), '- ' + fmt(r.ssAnualEmp), 'deduction');
+  html += row(t('irsAnnual'), '- ' + fmt(r.irs), 'deduction');
   if (r.jovemDiscount > 0)
-    html += row('&emsp;Desconto IRS Jovem', '- ' + fmt(r.jovemDiscount));
-  html += row('Liquido anual (base)', fmt(r.netAnual), 'subtotal');
+    html += row('&emsp;' + t('jovemDiscount'), '- ' + fmt(r.jovemDiscount));
+  html += row(t('netAnnualBase'), fmt(r.netAnual), 'subtotal');
   if (r.mealAnnualClean > 0)
-    html += row('Sub. Alimentacao (' + mealLabel + ', 11 meses)', '+ ' + fmt(r.mealAnnualClean), 'addition');
+    html += row(t('mealSub') + ' (' + mealLabel + ', 11 ' + t('months') + ')', '+ ' + fmt(r.mealAnnualClean), 'addition');
   if (r.transportAnnual > 0)
-    html += row('Sub. Transporte (11 meses)', '+ ' + fmt(r.transportAnnual), 'addition');
-  html += row('<strong>Total Liquido Anual</strong>', '<strong>' + fmt(r.totalNetAnual) + '</strong>');
+    html += row(t('transportSub') + ' (11 ' + t('months') + ')', '+ ' + fmt(r.transportAnnual), 'addition');
+  html += row('<strong>' + t('totalNetAnnual') + '</strong>', '<strong>' + fmt(r.totalNetAnual) + '</strong>');
   $('tbl-annual').innerHTML = html;
 
   $('employer-section').hidden = false;
   html = '';
-  html += row('Salario bruto anual', fmt(r.grossAnual));
-  html += row('SS empresa (23,75%)', '+ ' + fmt(r.ssAnualEntidade), 'addition');
+  html += row(t('grossAnnualLabel'), fmt(r.grossAnual));
+  html += row(t('ssEmployer'), '+ ' + fmt(r.ssAnualEntidade), 'addition');
   if (r.mealAnnualTotal > 0)
-    html += row('Sub. Alimentacao anual', '+ ' + fmt(r.mealAnnualTotal), 'addition');
+    html += row(t('mealAnnual'), '+ ' + fmt(r.mealAnnualTotal), 'addition');
   if (r.transportAnnual > 0)
-    html += row('Sub. Transporte anual', '+ ' + fmt(r.transportAnnual), 'addition');
-  html += row('<strong>Custo Total Anual</strong>', '<strong>' + fmt(r.empCostAnual) + '</strong>');
-  html += row('Custo Total Mensal (media)', fmt(r.empCostMonthly));
+    html += row(t('transportAnnual'), '+ ' + fmt(r.transportAnnual), 'addition');
+  html += row('<strong>' + t('totalCostAnnual') + '</strong>', '<strong>' + fmt(r.empCostAnual) + '</strong>');
+  html += row(t('totalCostMonthly'), fmt(r.empCostMonthly));
   $('tbl-employer').innerHTML = html;
 
   $('rate-badges').innerHTML =
     badge('SS', fmtPct(r.rSS)) +
-    badge('IRS Efetiva', fmtPct(r.rIRS)) +
+    badge(t('irsEffective'), fmtPct(r.rIRS)) +
     badge('Total', fmtPct(r.rTotal));
 
   $('warnings').innerHTML = r.warnings.map(w =>
     '<small class="warning">' + w + '</small>').join('');
 
   // Daily notes
-  const travelRate = getDailyRate('workers', 'national');
-  let notes = '<small class="travel-info">';
-  if (r.mealPerDay > 0)
-    notes += 'Alimentacao: ' + fmt(r.mealPerDay) + '/dia (' + mealLabel + ')';
-  notes += ' &middot; Deslocacao: ' + fmt(travelRate) + '/dia (nacional)';
-  notes += '</small>';
-  $('daily-notes').innerHTML = notes;
+  var notesHtml = buildDailyNotes(r, mealLabel);
+  $('daily-notes').innerHTML = notesHtml;
 }
 
 // --- Render: Trabalho Independente ---
 
 function renderIndDetailed(r) {
+  $('card-gross-label').textContent = t('grossCard');
+  $('card-net-label').textContent = t('netCard');
+  $('h-monthly').textContent = t('monthlyTitle');
+  $('h-annual').textContent = t('annualTitle');
+  $('h-rates').textContent = t('ratesTitle');
+
   $('res-gross').textContent = fmt(r.grossMonthly);
   $('res-net').textContent = fmt(r.netMonthly);
 
   let html = '';
-  html += row('Faturacao mensal', fmt(r.grossMonthly));
-  html += row('Seguranca Social', '- ' + fmt(r.ssMonthly), 'deduction');
-  html += row('IRS', '- ' + fmt(r.irsMonthly), 'deduction');
-  html += row('<strong>Liquido Mensal</strong>', '<strong>' + fmt(r.netMonthly) + '</strong>');
+  html += row(t('invoicing'), fmt(r.grossMonthly));
+  html += row(t('ss'), '- ' + fmt(r.ssMonthly), 'deduction');
+  html += row(t('irs'), '- ' + fmt(r.irsMonthly), 'deduction');
+  html += row('<strong>' + t('netMonthly') + '</strong>', '<strong>' + fmt(r.netMonthly) + '</strong>');
   $('tbl-monthly').innerHTML = html;
 
   html = '';
-  html += row('Faturacao anual (12 meses)', fmt(r.grossAnual));
-  html += row('Rendimento tributavel (75%)', fmt(r.rendTributavel));
-  html += row('SS anual', '- ' + fmt(r.ssAnual), 'deduction');
-  html += row('IRS anual', '- ' + fmt(r.irs), 'deduction');
+  html += row(t('invoicingAnnual'), fmt(r.grossAnual));
+  html += row(t('taxableIncome'), fmt(r.rendTributavel));
+  html += row(t('ssAnnual'), '- ' + fmt(r.ssAnual), 'deduction');
+  html += row(t('irsAnnual'), '- ' + fmt(r.irs), 'deduction');
   if (r.jovemDiscount > 0)
-    html += row('&emsp;Desconto IRS Jovem', '- ' + fmt(r.jovemDiscount));
-  html += row('<strong>Liquido Anual</strong>', '<strong>' + fmt(r.netAnual) + '</strong>');
+    html += row('&emsp;' + t('jovemDiscount'), '- ' + fmt(r.jovemDiscount));
+  html += row('<strong>' + t('netAnnual') + '</strong>', '<strong>' + fmt(r.netAnual) + '</strong>');
   $('tbl-annual').innerHTML = html;
 
   $('employer-section').hidden = true;
 
   $('rate-badges').innerHTML =
     badge('SS', fmtPct(r.rSS)) +
-    badge('IRS Efetiva', fmtPct(r.rIRS)) +
+    badge(t('irsEffective'), fmtPct(r.rIRS)) +
     badge('Total', fmtPct(r.rTotal));
 
   $('warnings').innerHTML = '';
+  $('daily-notes').innerHTML = '';
 }
 
 // --- Render: Vista Simples ---
 
 function renderDepSimple(r) {
+  const mealLabel = r.mealType === 'card' ? t('card') : t('cash');
   let html = '';
-  html += sRow('Salario Bruto', fmt(r.grossMonthlyEff), 'gross-row');
+  html += sRow(t('gross'), fmt(r.grossMonthlyEff), 'gross-row');
   html += '<hr>';
-  html += sRow('Seguranca Social (11%)', '- ' + fmt(r.ssMonthly), 'deduction');
-  html += sRow('IRS', '- ' + fmt(r.irsMonthly), 'deduction');
+  html += sRow(t('ss11'), '- ' + fmt(r.ssMonthly), 'deduction');
+  html += sRow(t('irs'), '- ' + fmt(r.irsMonthly), 'deduction');
   html += '<hr>';
-  html += sRow('Liquido Base', fmt(r.netMonthlyBase), '');
-  const mealLabelS = r.mealType === 'card' ? 'Cartao' : 'Dinheiro';
+  html += sRow(t('netBase'), fmt(r.netMonthlyBase), '');
   if (r.mealMonthlyClean > 0)
-    html += sRow('Sub. Alimentacao (' + mealLabelS + ')', '+ ' + fmt(r.mealMonthlyClean), 'addition');
+    html += sRow(t('mealSub') + ' (' + mealLabel + ')', '+ ' + fmt(r.mealMonthlyClean), 'addition');
   if (r.transportMonthly > 0)
-    html += sRow('Sub. Transporte', '+ ' + fmt(r.transportMonthly), 'addition');
+    html += sRow(t('transportSub'), '+ ' + fmt(r.transportMonthly), 'addition');
   html += '<hr>';
-  html += sRow('Total Liquido Mensal', fmt(r.totalNetMonthly), 'grand-total');
+  html += sRow(t('totalNetMonthly'), fmt(r.totalNetMonthly), 'grand-total');
   $('simple-content').innerHTML = html;
+  $('daily-notes-simple').innerHTML = buildDailyNotes(r, mealLabel);
 }
 
 function renderIndSimple(r) {
   let html = '';
-  html += sRow('Faturacao Mensal', fmt(r.grossMonthly), 'gross-row');
+  html += sRow(t('invoicing'), fmt(r.grossMonthly), 'gross-row');
   html += '<hr>';
-  html += sRow('Seguranca Social', '- ' + fmt(r.ssMonthly), 'deduction');
-  html += sRow('IRS', '- ' + fmt(r.irsMonthly), 'deduction');
+  html += sRow(t('ss'), '- ' + fmt(r.ssMonthly), 'deduction');
+  html += sRow(t('irs'), '- ' + fmt(r.irsMonthly), 'deduction');
   html += '<hr>';
-  html += sRow('Liquido Mensal', fmt(r.netMonthly), 'grand-total');
+  html += sRow(t('netMonthly'), fmt(r.netMonthly), 'grand-total');
   $('simple-content').innerHTML = html;
+  $('daily-notes-simple').innerHTML = '';
+}
+
+// --- Daily notes helper ---
+
+function buildDailyNotes(r, mealLabel) {
+  const travelRate = getDailyRate('workers', 'national');
+  let notes = '<small class="travel-info">';
+  if (r.mealPerDay > 0)
+    notes += t('mealNote') + ': ' + fmt(r.mealPerDay) + t('perDay') + ' (' + mealLabel + ')';
+  notes += ' &middot; ' + t('travelNote') + ': ' + fmt(travelRate) + t('perDay') + ' (' + t('national') + ')';
+  notes += '</small>';
+  return notes;
 }
 
 // --- Travel Helpers ---
@@ -464,6 +558,7 @@ function handleCalculate() {
     }
 
     result = calcDependente(input);
+    lastResult = result; lastResultType = 'dependente';
     renderDepDetailed(result);
     renderDepSimple(result);
   } else {
@@ -479,6 +574,7 @@ function handleCalculate() {
     }
 
     result = calcIndependente(input);
+    lastResult = result; lastResultType = 'independente';
     renderIndDetailed(result);
     renderIndSimple(result);
   }

@@ -369,9 +369,15 @@
       <!-- RESULTS PANEL -->
       <article>
         <!-- Vista: Pico role="group" -->
-        <div role="group" id="view-toggle">
-          <button data-value="detailed">Detalhado</button>
-          <button data-value="simple" class="outline">Resumo</button>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
+          <div role="group" id="view-toggle" style="flex:1">
+            <button data-value="detailed">Detalhado</button>
+            <button data-value="simple" class="outline">Resumo</button>
+          </div>
+          <div role="group" id="lang-toggle">
+            <button data-value="pt">PT</button>
+            <button data-value="en" class="outline">EN</button>
+          </div>
         </div>
 
         <div id="results-empty" class="results-empty">
@@ -382,32 +388,32 @@
         <div id="view-detailed" hidden>
           <div class="summary-cards">
             <div class="card">
-              <span class="card-label">Bruto Mensal</span>
+              <span class="card-label" id="card-gross-label">Bruto Mensal</span>
               <span class="card-value" id="res-gross"></span>
             </div>
             <div class="card card-net">
-              <span class="card-label">Liquido Mensal</span>
+              <span class="card-label" id="card-net-label">Liquido Mensal</span>
               <span class="card-value" id="res-net"></span>
             </div>
           </div>
 
           <div class="breakdown-section">
-            <h4>Decomposicao Mensal</h4>
+            <h4 id="h-monthly">Decomposicao Mensal</h4>
             <table class="breakdown-table striped"><tbody id="tbl-monthly"></tbody></table>
           </div>
 
           <div class="breakdown-section">
-            <h4>Resumo Anual</h4>
+            <h4 id="h-annual">Resumo Anual</h4>
             <table class="breakdown-table striped"><tbody id="tbl-annual"></tbody></table>
           </div>
 
           <div class="breakdown-section" id="employer-section">
-            <h4>Custo Empresa</h4>
+            <h4 id="h-employer">Custo Empresa</h4>
             <table class="breakdown-table striped"><tbody id="tbl-employer"></tbody></table>
           </div>
 
           <div class="breakdown-section">
-            <h4>Taxas Efetivas</h4>
+            <h4 id="h-rates">Taxas Efetivas</h4>
             <div class="rate-badges" id="rate-badges"></div>
           </div>
 
@@ -418,6 +424,7 @@
         <!-- Simple View -->
         <div id="view-simple" hidden>
           <div id="simple-content"></div>
+          <div id="daily-notes-simple" style="margin-top:0.75rem"></div>
         </div>
 
         <!-- Travel Results -->
