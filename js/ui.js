@@ -349,9 +349,17 @@ function renderDepSimple(r) {
     html += sRow(t('transportSub'), '+ ' + fmt(r.transportMonthly), 'addition');
   html += '<hr>';
   html += sRow(t('totalNetMonthly'), fmt(r.totalNetMonthly), 'grand-total');
+  // Annual breakdown - same calc as detailed
   html += '<hr>';
-  html += sRow(t('grossAnnualSimple'), fmt(r.grossAnual), 'gross-row');
-  html += sRow(t('netAnnualSimple'), fmt(r.totalNetAnual), 'grand-total');
+  html += sRow(t('grossAnnual') + ' (' + r.subsidyMode + ' ' + t('months') + ')', fmt(r.grossAnual), 'gross-row');
+  html += sRow(t('ssEmployee'), '- ' + fmt(r.ssAnualEmp), 'deduction');
+  html += sRow(t('irsAnnual'), '- ' + fmt(r.irs), 'deduction');
+  if (r.mealAnnualClean > 0)
+    html += sRow(t('mealSub') + ' (11 ' + t('months') + ')', '+ ' + fmt(r.mealAnnualClean), 'addition');
+  if (r.transportAnnual > 0)
+    html += sRow(t('transportSub') + ' (11 ' + t('months') + ')', '+ ' + fmt(r.transportAnnual), 'addition');
+  html += '<hr>';
+  html += sRow(t('totalNetAnnual'), fmt(r.totalNetAnual), 'grand-total');
   $('simple-content').innerHTML = html;
   $('daily-notes-simple').innerHTML = buildDailyNotes(r, mealLabel);
 }
@@ -364,9 +372,13 @@ function renderIndSimple(r) {
   html += sRow(t('irs'), '- ' + fmt(r.irsMonthly), 'deduction');
   html += '<hr>';
   html += sRow(t('netMonthly'), fmt(r.netMonthly), 'grand-total');
+  // Annual breakdown - same calc as detailed
   html += '<hr>';
-  html += sRow(t('grossAnnualSimple'), fmt(r.grossAnual), 'gross-row');
-  html += sRow(t('netAnnualSimple'), fmt(r.netAnual), 'grand-total');
+  html += sRow(t('invoicingAnnual'), fmt(r.grossAnual), 'gross-row');
+  html += sRow(t('ssAnnual'), '- ' + fmt(r.ssAnual), 'deduction');
+  html += sRow(t('irsAnnual'), '- ' + fmt(r.irs), 'deduction');
+  html += '<hr>';
+  html += sRow(t('netAnnual'), fmt(r.netAnual), 'grand-total');
   $('simple-content').innerHTML = html;
   $('daily-notes-simple').innerHTML = '';
 }
