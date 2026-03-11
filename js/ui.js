@@ -5,6 +5,8 @@ let currentContract = 'dependente';
 let currentDirection = 'gross-to-net';
 let currentView = 'detailed';
 let hasResults = false;
+let travelMode = 'auto';
+let travelEntries = [];
 
 // --- Toggles ---
 
@@ -13,6 +15,28 @@ function initToggles() {
     currentContract = v;
     $('form-dependente').hidden = v !== 'dependente';
     $('form-independente').hidden = v !== 'independente';
+    $('form-deslocacoes').hidden = v !== 'deslocacoes';
+    // Show/hide salary-specific UI
+    const isTrav = v === 'deslocacoes';
+    $('direction-toggle').hidden = isTrav;
+    $('btn-calculate').hidden = isTrav;
+    $('view-toggle').hidden = isTrav;
+    // Reset results panel visibility
+    if (isTrav) {
+      $('results-empty').hidden = true;
+      $('view-detailed').hidden = true;
+      $('view-simple').hidden = true;
+      $('view-travel').hidden = travelEntries.length === 0;
+      if (travelEntries.length === 0) $('results-empty').hidden = false;
+      updateTravelRateInfo();
+    } else {
+      $('view-travel').hidden = true;
+      if (!hasResults) {
+        $('results-empty').hidden = false;
+      } else {
+        showView(currentView);
+      }
+    }
   });
   setupToggle('direction-toggle', v => {
     currentDirection = v;
@@ -21,6 +45,11 @@ function initToggles() {
   setupToggle('view-toggle', v => {
     currentView = v;
     if (hasResults) showView(v);
+  });
+  setupToggle('travel-mode-toggle', v => {
+    travelMode = v;
+    $('travel-auto-section').hidden = v !== 'auto';
+    $('travel-manual-section').hidden = v !== 'manual';
   });
 }
 
@@ -241,9 +270,173 @@ function renderIndSimple(r) {
   $('simple-content').innerHTML = html;
 }
 
+// --- Travel Helpers ---
+
+function getTravelConfig() {
+  return {
+    month: parseInt($('travel-month').value),
+    year: parseInt($('travel-year').value),
+    workerType: $('travel-worker-type').value,
+    location: $('travel-location').value,
+  };
+}
+
+function updateTravelRateInfo() {
+  const cfg = getTravelConfig();
+  const rate = getDailyRate(cfg.workerType, cfg.location);
+  const loc = cfg.location === 'national' ? 'Nacional' : 'Internacional';
+  const type = cfg.workerType === 'workers' ? 'Trabalhadores' : 'Administradores';
+  $('travel-rate-info').textContent = loc + ' / ' + type + ': ' + fmt(rate) + '/dia | 25% = ' +
+    fmt(Math.round(rate * 0.25 * 100) / 100) + ' | 50% = ' + fmt(Math.round(rate * 0.50 * 100) / 100);
+}
+
+function renderTravelTable() {
+  const cfg = getTravelConfig();
+  const tbody = $('travel-entries-body');
+  let html = '';
+
+  travelEntries.forEach((e, i) => {
+    const val = calcDayValue(e, cfg.workerType, cfg.location);
+    html += '<tr data-idx="' + i + '">' +
+      '<td><input type="text" inputmode="numeric" class="te-from" value="' + e.dayFrom + '"></td>' +
+      '<td><input type="text" inputmode="numeric" class="te-to" value="' + e.dayTo + '"></td>' +
+      '<td><input type="text" class="te-desc" value="' + escHtml(e.description) + '"></td>' +
+      '<td><input type="text" inputmode="numeric" class="te-dep" placeholder="HH:MM" value="' + e.departure + '"></td>' +
+      '<td><input type="text" inputmode="numeric" class="te-arr" placeholder="HH:MM" value="' + e.arrival + '"></td>' +
+      '<td><input type="checkbox" class="te-lunch"' + (e.lunch ? ' checked' : '') + (e.fullDay ? ' disabled' : '') + '></td>' +
+      '<td><input type="checkbox" class="te-dinner"' + (e.dinner ? ' checked' : '') + (e.fullDay ? ' disabled' : '') + '></td>' +
+      '<td><input type="checkbox" class="te-acc"' + (e.accommodation ? ' checked' : '') + (e.fullDay ? ' disabled' : '') + '></td>' +
+      '<td><input type="checkbox" class="te-full"' + (e.fullDay ? ' checked' : '') + '></td>' +
+      '<td class="row-total">' + fmt(val) + '</td>' +
+      '<td><button class="btn-remove" title="Remover">&times;</button></td>' +
+      '</tr>';
+  });
+
+  tbody.innerHTML = html;
+
+  const total = calcTotal(travelEntries, cfg.workerType, cfg.location);
+  $('travel-total-value').textContent = fmt(total);
+
+  $('view-travel').hidden = travelEntries.length === 0;
+  $('results-empty').hidden = travelEntries.length > 0;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function syncEntryFromRow(tr, idx) {
+  const e = travelEntries[idx];
+  if (!e) return;
+  e.dayFrom = parseInt(tr.querySelector('.te-from').value) || 1;
+  e.dayTo = parseInt(tr.querySelector('.te-to').value) || e.dayFrom;
+  if (e.dayTo < e.dayFrom) e.dayTo = e.dayFrom;
+  e.description = tr.querySelector('.te-desc').value;
+  e.departure = tr.querySelector('.te-dep').value;
+  e.arrival = tr.querySelector('.te-arr').value;
+  e.fullDay = tr.querySelector('.te-full').checked;
+  if (e.fullDay) {
+    e.lunch = true; e.dinner = true; e.accommodation = true;
+  } else {
+    e.lunch = tr.querySelector('.te-lunch').checked;
+    e.dinner = tr.querySelector('.te-dinner').checked;
+    e.accommodation = tr.querySelector('.te-acc').checked;
+  }
+}
+
+function addTravelRow() {
+  const cfg = getTravelConfig();
+  const workDays = getWorkingDays(cfg.month, cfg.year);
+  const usedDays = new Set();
+  travelEntries.forEach(e => {
+    for (let d = e.dayFrom; d <= e.dayTo; d++) usedDays.add(d);
+  });
+  const nextDay = workDays.find(d => !usedDays.has(d)) || (travelEntries.length > 0 ? travelEntries[travelEntries.length - 1].dayTo + 1 : 1);
+  travelEntries.push({
+    dayFrom: nextDay,
+    dayTo: nextDay,
+    description: TRAVEL.DEFAULT_DESCRIPTIONS[travelEntries.length % TRAVEL.DEFAULT_DESCRIPTIONS.length],
+    departure: '09:00',
+    arrival: '18:00',
+    fullDay: true,
+    lunch: true,
+    dinner: true,
+    accommodation: true,
+  });
+  renderTravelTable();
+}
+
+function handleGenerate() {
+  const cfg = getTravelConfig();
+  const target = parseFloat($('travel-target').value) || 0;
+  if (target <= 0) {
+    $('travel-warning').innerHTML = '<small class="error">Introduza um valor total valido.</small>';
+    return;
+  }
+  const result = generateEntries(target, cfg.month, cfg.year, cfg.workerType, cfg.location);
+  travelEntries = result.entries;
+  $('travel-warning').innerHTML = result.warning
+    ? '<small class="warning">' + result.warning + '</small>' : '';
+  renderTravelTable();
+}
+
+function handleExport() {
+  if (travelEntries.length === 0) return;
+  const cfg = getTravelConfig();
+  exportToExcel(travelEntries, cfg.workerType, cfg.location, cfg.month, cfg.year);
+}
+
+function initTravelEvents() {
+  $('btn-generate').addEventListener('click', handleGenerate);
+  $('btn-add-row').addEventListener('click', addTravelRow);
+  $('btn-add-row-bottom').addEventListener('click', addTravelRow);
+  $('btn-export').addEventListener('click', handleExport);
+
+  // Recalc on config change
+  ['travel-worker-type', 'travel-location', 'travel-month', 'travel-year'].forEach(id => {
+    $(id).addEventListener('change', () => {
+      updateTravelRateInfo();
+      if (travelEntries.length > 0) renderTravelTable();
+    });
+  });
+
+  // Event delegation on entries table
+  $('travel-entries-body').addEventListener('input', e => {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    const idx = parseInt(tr.dataset.idx);
+    syncEntryFromRow(tr, idx);
+    renderTravelTable();
+  });
+  $('travel-entries-body').addEventListener('change', e => {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    const idx = parseInt(tr.dataset.idx);
+    syncEntryFromRow(tr, idx);
+    renderTravelTable();
+  });
+  $('travel-entries-body').addEventListener('click', e => {
+    if (!e.target.classList.contains('btn-remove')) return;
+    const tr = e.target.closest('tr');
+    const idx = parseInt(tr.dataset.idx);
+    travelEntries.splice(idx, 1);
+    renderTravelTable();
+  });
+
+  // Enter on target input triggers generate
+  $('travel-target').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleGenerate();
+  });
+
+  // Set default month to current
+  const now = new Date();
+  $('travel-month').value = now.getMonth() + 1;
+}
+
 // --- Main Handler ---
 
 function handleCalculate() {
+  if (currentContract === 'deslocacoes') return;
   $('errors').innerHTML = '';
   let input, errors, result;
 
@@ -289,6 +482,7 @@ function handleCalculate() {
 document.addEventListener('DOMContentLoaded', () => {
   initToggles();
   initCheckboxes();
+  initTravelEvents();
   $('btn-calculate').addEventListener('click', handleCalculate);
 
   document.querySelectorAll('input[type="number"]').forEach(inp => {

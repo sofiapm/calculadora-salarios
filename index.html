@@ -125,6 +125,36 @@
       color: var(--pico-muted-color);
       text-align: center;
     }
+
+    /* Travel entries table */
+    .travel-table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+    .travel-table { width: 100%; margin: 0; }
+    .travel-table th { font-size: 0.75rem; padding: 0.4rem 0.3rem; white-space: nowrap; }
+    .travel-table td { padding: 0.3rem 0.2rem; vertical-align: middle; }
+    .travel-table input[type="text"] {
+      margin: 0; padding: 0.25rem 0.35rem; font-size: 0.8rem; min-width: 0;
+    }
+    .travel-table .te-from,
+    .travel-table .te-to { width: 50px; text-align: center; }
+    .travel-table .te-desc { width: 100%; min-width: 120px; }
+    .travel-table .te-dep,
+    .travel-table .te-arr { width: 70px; text-align: center; }
+    .travel-table input[type="checkbox"] { margin: 0; }
+    .travel-table .row-total { font-family: var(--pico-font-family-monospace); font-size: 0.85rem; white-space: nowrap; }
+    .travel-table .btn-remove {
+      background: none; border: none; color: var(--pico-del-color);
+      cursor: pointer; padding: 0.2rem 0.4rem; font-size: 1rem; line-height: 1;
+    }
+    .travel-total-row td { font-weight: 700; border-top: 2px solid var(--pico-muted-border-color); }
+    .travel-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .travel-info { font-size: 0.8rem; color: var(--pico-muted-color); margin-top: 0.25rem; }
+
+    /* Compact form styling for deslocacoes */
+    #form-deslocacoes label { font-size: 0.85rem; margin-bottom: 0.5rem; }
+    #form-deslocacoes select,
+    #form-deslocacoes input[type="number"] { font-size: 0.85rem; padding: 0.4rem 0.5rem; }
+    #form-deslocacoes .grid { margin-bottom: 0.25rem; }
+    #form-deslocacoes button { font-size: 0.85rem; padding: 0.4rem 0.75rem; }
   </style>
 </head>
 <body>
@@ -139,8 +169,9 @@
       <article>
         <!-- Tipo de contrato: Pico role="group" -->
         <div role="group" id="contract-toggle">
-          <button data-value="dependente">Trabalho Dependente</button>
-          <button data-value="independente" class="outline">Trabalho Independente</button>
+          <button data-value="dependente">Salario</button>
+          <button data-value="independente" class="outline">Independente</button>
+          <button data-value="deslocacoes" class="outline">Deslocacoes</button>
         </div>
 
         <!-- Direcao: Pico role="group" -->
@@ -272,6 +303,66 @@
           </fieldset>
         </div>
 
+        <!-- DESLOCACOES -->
+        <div id="form-deslocacoes" hidden>
+          <div role="group" id="travel-mode-toggle">
+            <button data-value="auto">Automatico</button>
+            <button data-value="manual" class="outline">Manual</button>
+          </div>
+
+          <div class="grid">
+            <label>Mes
+              <select id="travel-month">
+                <option value="1">Janeiro</option>
+                <option value="2">Fevereiro</option>
+                <option value="3">Marco</option>
+                <option value="4">Abril</option>
+                <option value="5">Maio</option>
+                <option value="6">Junho</option>
+                <option value="7">Julho</option>
+                <option value="8">Agosto</option>
+                <option value="9">Setembro</option>
+                <option value="10">Outubro</option>
+                <option value="11">Novembro</option>
+                <option value="12">Dezembro</option>
+              </select>
+            </label>
+            <label>Ano
+              <input type="number" id="travel-year" min="2024" max="2030" value="2026">
+            </label>
+          </div>
+
+          <div class="grid">
+            <label>Tipo de Trabalhador
+              <select id="travel-worker-type">
+                <option value="workers">Trabalhadores</option>
+                <option value="directors">Administradores</option>
+              </select>
+            </label>
+            <label>Localizacao
+              <select id="travel-location">
+                <option value="national">Nacional</option>
+                <option value="international">Internacional</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="travel-auto-section">
+            <label>Valor Total Pretendido (&euro;)
+              <input type="number" id="travel-target" step="0.01" min="0" placeholder="500.00">
+            </label>
+            <button id="btn-generate" class="outline">Gerar Entradas</button>
+          </div>
+
+          <div id="travel-manual-section" hidden>
+            <button id="btn-add-row" class="outline">+ Adicionar Linha</button>
+          </div>
+
+          <div id="travel-warning"></div>
+
+          <p class="travel-info" id="travel-rate-info"></p>
+        </div>
+
         <button id="btn-calculate">Calcular</button>
       </article>
 
@@ -327,6 +418,41 @@
         <div id="view-simple" hidden>
           <div id="simple-content"></div>
         </div>
+
+        <!-- Travel Results -->
+        <div id="view-travel" hidden>
+          <div class="travel-table-wrap">
+            <table class="travel-table striped">
+              <thead>
+                <tr>
+                  <th>De</th>
+                  <th>A</th>
+                  <th>Descricao</th>
+                  <th>Partida</th>
+                  <th>Chegada</th>
+                  <th title="Almoco">Alm.</th>
+                  <th title="Jantar">Jan.</th>
+                  <th title="Dormida">Dor.</th>
+                  <th title="Dia Completo">100%</th>
+                  <th>Valor</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="travel-entries-body"></tbody>
+              <tfoot>
+                <tr class="travel-total-row">
+                  <td colspan="9" style="text-align:right">Total</td>
+                  <td id="travel-total-value" class="row-total"></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="travel-actions">
+            <button id="btn-export">Exportar Excel</button>
+            <button id="btn-add-row-bottom" class="outline">+ Adicionar Linha</button>
+          </div>
+        </div>
       </article>
     </div>
   </main>
@@ -335,8 +461,12 @@
     <small>Valores indicativos baseados na legislacao de 2026. Consulte um contabilista para situacoes especificas.</small>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="js/tax-data.js"></script>
   <script src="js/calculator.js"></script>
+  <script src="js/travel-data.js"></script>
+  <script src="js/travel-calculator.js"></script>
+  <script src="js/excel-export.js"></script>
   <script src="js/ui.js"></script>
 </body>
 </html>
