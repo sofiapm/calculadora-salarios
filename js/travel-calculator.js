@@ -21,7 +21,7 @@ function getDailyRate(workerType, location) {
 
 function calcDayValue(entry, workerType, location) {
   const rate = getDailyRate(workerType, location);
-  const numDays = (entry.dayTo || entry.dayFrom || entry.day || 1) - (entry.dayFrom || entry.day || 1) + 1;
+  const numDays = (entry.dayTo || entry.dayFrom) - entry.dayFrom + 1;
   if (entry.fullDay) return rate * numDays;
   let pct = 0;
   if (entry.lunch) pct += TRAVEL.PERCENTAGES.lunch;
@@ -51,10 +51,10 @@ function generateEntries(targetAmount, month, year, workerType, location) {
   }
 
   const entries = [];
-
-  // Group consecutive working days into range entries
   let descIdx = 0;
   let i = 0;
+
+  // Agrupar dias uteis consecutivos
   while (i < fullDaysNeeded) {
     const rangeStart = workingDays[i];
     let rangeEnd = rangeStart;
@@ -77,14 +77,16 @@ function generateEntries(targetAmount, month, year, workerType, location) {
     i++;
   }
 
-  const usedAmount = fullDaysNeeded * rate;
-  let remaining = Math.round((targetAmount - usedAmount) * 100) / 100;
+  // Dia parcial para o valor restante
+  let remaining = Math.round((targetAmount - fullDaysNeeded * rate) * 100) / 100;
 
   if (remaining > 0 && fullDaysNeeded < workingDays.length) {
-    const nextDay = workingDays[fullDaysNeeded];
+    const accValue = Math.round(rate * TRAVEL.PERCENTAGES.accommodation * 100) / 100;
+    const mealValue = Math.round(rate * TRAVEL.PERCENTAGES.lunch * 100) / 100;
+
     const entry = {
-      dayFrom: nextDay,
-      dayTo: nextDay,
+      dayFrom: workingDays[fullDaysNeeded],
+      dayTo: workingDays[fullDaysNeeded],
       description: descriptions[descIdx % descriptions.length],
       departure: '09:00',
       arrival: '18:00',
@@ -94,22 +96,17 @@ function generateEntries(targetAmount, month, year, workerType, location) {
       accommodation: false,
     };
 
-    const accValue = Math.round(rate * TRAVEL.PERCENTAGES.accommodation * 100) / 100;
-    const mealValue = Math.round(rate * TRAVEL.PERCENTAGES.lunch * 100) / 100;
-
     if (remaining >= accValue) {
       entry.accommodation = true;
       remaining = Math.round((remaining - accValue) * 100) / 100;
     }
     if (remaining >= mealValue) {
       entry.lunch = true;
-      entry.departure = '09:00';
       remaining = Math.round((remaining - mealValue) * 100) / 100;
     }
     if (remaining >= mealValue) {
       entry.dinner = true;
       entry.arrival = '21:00';
-      remaining = Math.round((remaining - mealValue) * 100) / 100;
     }
 
     if (entry.lunch || entry.dinner || entry.accommodation) {

@@ -8,7 +8,6 @@ let currentLang = 'pt';
 let hasResults = false;
 let lastResult = null;
 let lastResultType = null;
-let travelMode = 'auto';
 let travelEntries = [];
 
 // --- Toggles ---
@@ -19,26 +18,20 @@ function initToggles() {
     $('form-dependente').hidden = v !== 'dependente';
     $('form-independente').hidden = v !== 'independente';
     $('form-deslocacoes').hidden = v !== 'deslocacoes';
-    // Show/hide salary-specific UI
     const isTrav = v === 'deslocacoes';
     $('direction-toggle').hidden = isTrav;
     $('btn-calculate').hidden = isTrav;
     $('view-toggle').hidden = isTrav;
-    // Reset results panel visibility
     if (isTrav) {
-      $('results-empty').hidden = true;
+      $('results-empty').hidden = travelEntries.length > 0;
       $('view-detailed').hidden = true;
       $('view-simple').hidden = true;
       $('view-travel').hidden = travelEntries.length === 0;
-      if (travelEntries.length === 0) $('results-empty').hidden = false;
       updateTravelRateInfo();
     } else {
       $('view-travel').hidden = true;
-      if (!hasResults) {
-        $('results-empty').hidden = false;
-      } else {
-        showView(currentView);
-      }
+      if (hasResults) showView(currentView);
+      else $('results-empty').hidden = false;
     }
   });
   setupToggle('direction-toggle', v => {
@@ -54,7 +47,6 @@ function initToggles() {
     if (hasResults && lastResult) reRender();
   });
   setupToggle('travel-mode-toggle', v => {
-    travelMode = v;
     $('travel-auto-section').hidden = v !== 'auto';
     $('travel-manual-section').hidden = v !== 'manual';
   });
@@ -150,7 +142,9 @@ function showView(view) {
 // --- Render Helpers ---
 
 function row(label, value, cls) {
-  return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td><td style="text-align:right;font-family:var(--pico-font-family-monospace)">' + value + '</td></tr>';
+  return '<tr' + (cls ? ' class="' + cls + '"' : '') +
+    '><td>' + label + '</td><td style="text-align:right;font-family:var(--pico-font-family-monospace)">' +
+    value + '</td></tr>';
 }
 
 function sRow(label, value, cls) {
@@ -163,7 +157,7 @@ function badge(label, value) {
 
 // --- i18n labels ---
 
-var L = {
+const L = {
   pt: {
     grossCard: 'Bruto Mensal', netCard: 'Liquido Mensal',
     gross: 'Salario bruto', ss11: 'Seguranca Social (11%)', irs: 'IRS',
@@ -171,8 +165,7 @@ var L = {
     totalNetMonthly: 'Total Liquido Mensal',
     grossAnnual: 'Rendimento bruto', ssEmployee: 'SS anual (trabalhador)',
     irsAnnual: 'IRS anual', jovemDiscount: 'Desconto IRS Jovem',
-    netAnnualBase: 'Liquido anual (base)', months: 'meses',
-    totalNetAnnual: 'Total Liquido Anual',
+    months: 'meses', totalNetAnnual: 'Total Liquido Anual',
     employerTitle: 'Custo Empresa', grossAnnualLabel: 'Salario bruto anual',
     ssEmployer: 'SS empresa (23,75%)', mealAnnual: 'Sub. Alimentacao anual',
     transportAnnual: 'Sub. Transporte anual',
@@ -181,11 +174,9 @@ var L = {
     ratesTitle: 'Taxas Efetivas', irsEffective: 'IRS Efetiva',
     card: 'Cartao', cash: 'Dinheiro',
     mealNote: 'Alimentacao', travelNote: 'Deslocacao', perDay: '/dia', national: 'nacional',
-    // Independente
     invoicing: 'Faturacao mensal', invoicingAnnual: 'Faturacao anual (12 meses)',
     taxableIncome: 'Rendimento tributavel (75%)', ss: 'Seguranca Social',
     ssAnnual: 'SS anual', netMonthly: 'Liquido Mensal', netAnnual: 'Liquido Anual',
-    grossAnnualSimple: 'Bruto Anual', netAnnualSimple: 'Liquido Anual',
   },
   en: {
     grossCard: 'Gross Monthly', netCard: 'Net Monthly',
@@ -194,8 +185,7 @@ var L = {
     totalNetMonthly: 'Total Net Monthly',
     grossAnnual: 'Gross income', ssEmployee: 'SS annual (employee)',
     irsAnnual: 'Income Tax annual', jovemDiscount: 'Youth Tax Discount',
-    netAnnualBase: 'Net annual (base)', months: 'months',
-    totalNetAnnual: 'Total Net Annual',
+    months: 'months', totalNetAnnual: 'Total Net Annual',
     employerTitle: 'Employer Cost', grossAnnualLabel: 'Gross annual salary',
     ssEmployer: 'SS employer (23.75%)', mealAnnual: 'Meal Allowance annual',
     transportAnnual: 'Transport Allowance annual',
@@ -204,11 +194,9 @@ var L = {
     ratesTitle: 'Effective Rates', irsEffective: 'Income Tax Eff.',
     card: 'Card', cash: 'Cash',
     mealNote: 'Meal', travelNote: 'Travel', perDay: '/day', national: 'national',
-    // Independente
     invoicing: 'Monthly invoicing', invoicingAnnual: 'Annual invoicing (12 months)',
     taxableIncome: 'Taxable income (75%)', ss: 'Social Security',
     ssAnnual: 'SS annual', netMonthly: 'Net Monthly', netAnnual: 'Net Annual',
-    grossAnnualSimple: 'Gross Annual', netAnnualSimple: 'Net Annual',
   }
 };
 
@@ -241,6 +229,8 @@ function renderDepDetailed(r) {
   $('res-net').textContent = fmt(r.totalNetMonthly);
 
   const mealLabel = r.mealType === 'card' ? t('card') : t('cash');
+
+  // Mensal
   let html = '';
   html += row(t('gross'), fmt(r.grossMonthlyEff));
   html += row(t('ss11'), '- ' + fmt(r.ssMonthly), 'deduction');
@@ -253,13 +243,14 @@ function renderDepDetailed(r) {
   html += row('<strong>' + t('totalNetMonthly') + '</strong>', '<strong>' + fmt(r.totalNetMonthly) + '</strong>');
   $('tbl-monthly').innerHTML = html;
 
+  // Anual
   html = '';
   html += row(t('grossAnnual') + ' (' + r.subsidyMode + ' ' + t('months') + ')', fmt(r.grossAnual));
   html += row(t('ssEmployee'), '- ' + fmt(r.ssAnualEmp), 'deduction');
   html += row(t('irsAnnual'), '- ' + fmt(r.irs), 'deduction');
   if (r.jovemDiscount > 0)
     html += row('&emsp;' + t('jovemDiscount'), '- ' + fmt(r.jovemDiscount));
-  html += row(t('netAnnualBase'), fmt(r.netAnual), 'subtotal');
+  html += row(t('netBase'), fmt(r.netAnual), 'subtotal');
   if (r.mealAnnualClean > 0)
     html += row(t('mealSub') + ' (' + mealLabel + ', 11 ' + t('months') + ')', '+ ' + fmt(r.mealAnnualClean), 'addition');
   if (r.transportAnnual > 0)
@@ -267,6 +258,7 @@ function renderDepDetailed(r) {
   html += row('<strong>' + t('totalNetAnnual') + '</strong>', '<strong>' + fmt(r.totalNetAnual) + '</strong>');
   $('tbl-annual').innerHTML = html;
 
+  // Custo empresa
   $('employer-section').hidden = false;
   html = '';
   html += row(t('grossAnnualLabel'), fmt(r.grossAnual));
@@ -279,6 +271,7 @@ function renderDepDetailed(r) {
   html += row(t('totalCostMonthly'), fmt(r.empCostMonthly));
   $('tbl-employer').innerHTML = html;
 
+  // Taxas
   $('rate-badges').innerHTML =
     badge('SS', fmtPct(r.rSS)) +
     badge(t('irsEffective'), fmtPct(r.rIRS)) +
@@ -286,10 +279,7 @@ function renderDepDetailed(r) {
 
   $('warnings').innerHTML = r.warnings.map(w =>
     '<small class="warning">' + w + '</small>').join('');
-
-  // Daily notes
-  var notesHtml = buildDailyNotes(r, mealLabel);
-  $('daily-notes').innerHTML = notesHtml;
+  $('daily-notes').innerHTML = buildDailyNotes(r, mealLabel);
 }
 
 // --- Render: Trabalho Independente ---
@@ -342,14 +332,13 @@ function renderDepSimple(r) {
   html += sRow(t('ss11'), '- ' + fmt(r.ssMonthly), 'deduction');
   html += sRow(t('irs'), '- ' + fmt(r.irsMonthly), 'deduction');
   html += '<hr>';
-  html += sRow(t('netBase'), fmt(r.netMonthlyBase), '');
+  html += sRow(t('netBase'), fmt(r.netMonthlyBase));
   if (r.mealMonthlyClean > 0)
     html += sRow(t('mealSub') + ' (' + mealLabel + ')', '+ ' + fmt(r.mealMonthlyClean), 'addition');
   if (r.transportMonthly > 0)
     html += sRow(t('transportSub'), '+ ' + fmt(r.transportMonthly), 'addition');
   html += '<hr>';
   html += sRow(t('totalNetMonthly'), fmt(r.totalNetMonthly), 'grand-total');
-  // Annual breakdown - same calc as detailed
   html += '<hr>';
   html += sRow(t('grossAnnual') + ' (' + r.subsidyMode + ' ' + t('months') + ')', fmt(r.grossAnual), 'gross-row');
   html += sRow(t('ssEmployee'), '- ' + fmt(r.ssAnualEmp), 'deduction');
@@ -360,6 +349,9 @@ function renderDepSimple(r) {
     html += sRow(t('transportSub') + ' (11 ' + t('months') + ')', '+ ' + fmt(r.transportAnnual), 'addition');
   html += '<hr>';
   html += sRow(t('totalNetAnnual'), fmt(r.totalNetAnual), 'grand-total');
+  html += '<hr>';
+  html += sRow(t('totalCostAnnual'), fmt(r.empCostAnual), 'gross-row');
+  html += sRow(t('totalCostMonthly'), fmt(r.empCostMonthly));
   $('simple-content').innerHTML = html;
   $('daily-notes-simple').innerHTML = buildDailyNotes(r, mealLabel);
 }
@@ -372,7 +364,6 @@ function renderIndSimple(r) {
   html += sRow(t('irs'), '- ' + fmt(r.irsMonthly), 'deduction');
   html += '<hr>';
   html += sRow(t('netMonthly'), fmt(r.netMonthly), 'grand-total');
-  // Annual breakdown - same calc as detailed
   html += '<hr>';
   html += sRow(t('invoicingAnnual'), fmt(r.grossAnual), 'gross-row');
   html += sRow(t('ssAnnual'), '- ' + fmt(r.ssAnual), 'deduction');
@@ -417,7 +408,6 @@ function updateTravelRateInfo() {
 
 function renderTravelTable() {
   const cfg = getTravelConfig();
-  const tbody = $('travel-entries-body');
   let html = '';
 
   travelEntries.forEach((e, i) => {
@@ -437,11 +427,8 @@ function renderTravelTable() {
       '</tr>';
   });
 
-  tbody.innerHTML = html;
-
-  const total = calcTotal(travelEntries, cfg.workerType, cfg.location);
-  $('travel-total-value').textContent = fmt(total);
-
+  $('travel-entries-body').innerHTML = html;
+  $('travel-total-value').textContent = fmt(calcTotal(travelEntries, cfg.workerType, cfg.location));
   $('view-travel').hidden = travelEntries.length === 0;
   $('results-empty').hidden = travelEntries.length > 0;
 }
@@ -476,7 +463,8 @@ function addTravelRow() {
   travelEntries.forEach(e => {
     for (let d = e.dayFrom; d <= e.dayTo; d++) usedDays.add(d);
   });
-  const nextDay = workDays.find(d => !usedDays.has(d)) || (travelEntries.length > 0 ? travelEntries[travelEntries.length - 1].dayTo + 1 : 1);
+  const lastTo = travelEntries.length > 0 ? travelEntries[travelEntries.length - 1].dayTo + 1 : 1;
+  const nextDay = workDays.find(d => !usedDays.has(d)) || lastTo;
   travelEntries.push({
     dayFrom: nextDay,
     dayTo: nextDay,
@@ -511,13 +499,19 @@ function handleExport() {
   exportToExcel(travelEntries, cfg.workerType, cfg.location, cfg.month, cfg.year);
 }
 
+function handleTravelEntryEvent(e) {
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  syncEntryFromRow(tr, parseInt(tr.dataset.idx));
+  renderTravelTable();
+}
+
 function initTravelEvents() {
   $('btn-generate').addEventListener('click', handleGenerate);
   $('btn-add-row').addEventListener('click', addTravelRow);
   $('btn-add-row-bottom').addEventListener('click', addTravelRow);
   $('btn-export').addEventListener('click', handleExport);
 
-  // Recalc on config change
   ['travel-worker-type', 'travel-location', 'travel-month', 'travel-year'].forEach(id => {
     $(id).addEventListener('change', () => {
       updateTravelRateInfo();
@@ -525,37 +519,21 @@ function initTravelEvents() {
     });
   });
 
-  // Event delegation on entries table
-  $('travel-entries-body').addEventListener('input', e => {
-    const tr = e.target.closest('tr');
-    if (!tr) return;
-    const idx = parseInt(tr.dataset.idx);
-    syncEntryFromRow(tr, idx);
-    renderTravelTable();
-  });
-  $('travel-entries-body').addEventListener('change', e => {
-    const tr = e.target.closest('tr');
-    if (!tr) return;
-    const idx = parseInt(tr.dataset.idx);
-    syncEntryFromRow(tr, idx);
-    renderTravelTable();
-  });
-  $('travel-entries-body').addEventListener('click', e => {
+  const tbody = $('travel-entries-body');
+  tbody.addEventListener('input', handleTravelEntryEvent);
+  tbody.addEventListener('change', handleTravelEntryEvent);
+  tbody.addEventListener('click', e => {
     if (!e.target.classList.contains('btn-remove')) return;
     const tr = e.target.closest('tr');
-    const idx = parseInt(tr.dataset.idx);
-    travelEntries.splice(idx, 1);
+    travelEntries.splice(parseInt(tr.dataset.idx), 1);
     renderTravelTable();
   });
 
-  // Enter on target input triggers generate
   $('travel-target').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleGenerate();
   });
 
-  // Set default month to current
-  const now = new Date();
-  $('travel-month').value = now.getMonth() + 1;
+  $('travel-month').value = new Date().getMonth() + 1;
 }
 
 // --- Main Handler ---
@@ -563,38 +541,28 @@ function initTravelEvents() {
 function handleCalculate() {
   if (currentContract === 'deslocacoes') return;
   $('errors').innerHTML = '';
-  let input, errors, result;
 
-  if (currentContract === 'dependente') {
-    input = collectDepInput();
-    errors = validate(input, 'dependente');
-    if (errors.length) { showErrors(errors); return; }
+  const isDep = currentContract === 'dependente';
+  const input = isDep ? collectDepInput() : collectIndInput();
+  const errors = validate(input, currentContract);
+  if (errors.length) { showErrors(errors); return; }
 
-    if (currentDirection === 'net-to-gross') {
-      const targetNet = input.grossMonthly;
-      input.grossMonthly = 0;
-      const gross = findGross(targetNet, calcDependente, input, 'totalNetMonthly');
-      input.grossMonthly = gross;
-    }
+  if (currentDirection === 'net-to-gross') {
+    const targetNet = input.grossMonthly;
+    input.grossMonthly = 0;
+    const calcFn = isDep ? calcDependente : calcIndependente;
+    const netField = isDep ? 'totalNetMonthly' : 'netMonthly';
+    input.grossMonthly = findGross(targetNet, calcFn, input, netField);
+  }
 
-    result = calcDependente(input);
-    lastResult = result; lastResultType = 'dependente';
+  const result = isDep ? calcDependente(input) : calcIndependente(input);
+  lastResult = result;
+  lastResultType = currentContract;
+
+  if (isDep) {
     renderDepDetailed(result);
     renderDepSimple(result);
   } else {
-    input = collectIndInput();
-    errors = validate(input, 'independente');
-    if (errors.length) { showErrors(errors); return; }
-
-    if (currentDirection === 'net-to-gross') {
-      const targetNet = input.grossMonthly;
-      input.grossMonthly = 0;
-      const gross = findGross(targetNet, calcIndependente, input, 'netMonthly');
-      input.grossMonthly = gross;
-    }
-
-    result = calcIndependente(input);
-    lastResult = result; lastResultType = 'independente';
     renderIndDetailed(result);
     renderIndSimple(result);
   }
