@@ -1,7 +1,7 @@
 // Constantes fiscais Portugal 2026
 const TAX = Object.freeze({
   YEAR: 2026,
-  IAS: 522.50,
+  IAS: 537.13,
   MIN_WAGE: 920,
 
   // Seguranca Social
@@ -18,12 +18,13 @@ const TAX = Object.freeze({
   MEAL_EXEMPT_CASH: 6.15,
   MEAL_EXEMPT_CARD: 10.46,
 
-  // Dependentes
-  DEP_DEDUCTION: 726,
-  DEP_UNDER3_EXTRA: 726,
+  // Dependentes (Art. 78-A CIRS)
+  DEP_DEDUCTION: 600,
+  DEP_UNDER3_DEDUCTION: 726,
+  DEP_UNDER6_SECOND: 900,
 
   // IRS Jovem
-  IRS_JOVEM_LIMIT: 55 * 522.50, // 28,737.50
+  IRS_JOVEM_LIMIT: 55 * 537.13, // 29,542.15
 
   // Escaloes IRS 2026
   BRACKETS: Object.freeze([

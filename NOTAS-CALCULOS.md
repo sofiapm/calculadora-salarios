@@ -108,7 +108,7 @@ Valores de deducao a coleta por dependente:
 | Cada dependente com idade <= 3 anos | **726 EUR** |
 | 2.o dependente em diante com idade <= 6 anos | **900 EUR** |
 
-> **Simplificacao na implementacao:** O codigo usa 726 EUR para todos os dependentes + 726 EUR extra para menores de 3 anos. Ver seccao "Discrepancias Conhecidas".
+> **Implementacao:** O codigo aplica 600 EUR para dependentes >3 anos e 726 EUR para dependentes <=3 anos. A deducao de 900 EUR (2.o dependente <=6 anos) nao esta implementada por falta de input especifico na UI.
 
 **Fonte legal:** Art. 78.o-A do CIRS
 - [Portal das Financas - Art. 78.o-A CIRS](https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs78a.aspx)
@@ -130,7 +130,7 @@ Beneficio para trabalhadores com menos de 35 anos (Cat. A e Cat. B).
 
 **Formula:** `Desconto = IRS x (min(Bruto, Limite) / Bruto) x Taxa_Isencao`
 
-> **Simplificacao na implementacao:** O codigo usa IAS 522,50 (2025), resultando num limite de 28.737,50 em vez de 29.542,15. Ver seccao "Discrepancias Conhecidas".
+> **Implementacao:** O codigo usa IAS 537,13 (2026), limite = 29.542,15 EUR.
 
 **Fonte legal:** Art. 12.o-B do CIRS, introduzido pela Lei 24-D/2022, alargado pela Lei 45-A/2024 (OE 2025)
 - [Portal das Financas - Art. 12.o-B CIRS](https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx)
@@ -199,7 +199,7 @@ Valores nacionais atualizados em 5% pelo DL 1/2025 (face a 2024). Mantidos para 
 | 08/12 | Terca | Imaculada Conceicao |
 | 25/12 | Sexta | Natal |
 
-> **Nota:** Carnaval (17/02) e feriado **facultativo**, nao obrigatorio. A calculadora inclui-o nos feriados por ser observado pela maioria dos empregadores.
+> **Nota:** Carnaval (17/02) e feriado **municipal/facultativo**, nao e feriado nacional obrigatorio. Nao existe em todas as cidades de Portugal. A calculadora nao o inclui nos feriados.
 
 **Fonte legal:** Art. 234.o do Codigo do Trabalho (Lei n.o 7/2009)
 - [Codigo do Trabalho Art. 234.o - DRE](https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2009-34546475-73982045)
@@ -261,14 +261,16 @@ Liquido Anual = Bruto Anual - SS Anual - IRS Anual
 
 ---
 
-## 12. Discrepancias Conhecidas na Implementacao
+## 12. Discrepancias Corrigidas (Marco 2026)
 
-| # | Item | Valor no Codigo | Valor Correto 2026 | Impacto |
-|---|------|----------------|--------------------|---------|
-| 1 | IAS | 522,50 EUR | **537,13 EUR** | Baixo - so afeta o limite IRS Jovem |
-| 2 | IRS Jovem limit | 28.737,50 EUR (55x522,50) | **29.542,15 EUR** (55x537,13) | Baixo - ligeira diferenca no cap |
-| 3 | Deducao dependentes | 726 EUR (todos) + 726 extra (<3) | **600 / 726 / 900** conforme idade | Medio - sobreestima deducao para dependentes >3 anos |
-| 4 | Carnaval | Incluido como feriado | Feriado facultativo | Baixo - 1 dia util a mais/menos em Fevereiro |
+Todas as discrepancias identificadas foram corrigidas:
+
+| # | Item | Antes | Corrigido Para |
+|---|------|-------|----------------|
+| 1 | IAS | 522,50 EUR (2025) | **537,13 EUR** (2026) |
+| 2 | IRS Jovem limit | 28.737,50 (55x522,50) | **29.542,15** (55x537,13) |
+| 3 | Deducao dependentes | 726 todos + 726 extra (<3) | **600** (>3), **726** (<=3) |
+| 4 | Carnaval | Incluido nos feriados | **Removido** (feriado municipal, nao nacional) |
 
 ---
 
@@ -299,7 +301,7 @@ Liquido Anual = Bruto Anual - SS Anual - IRS Anual
 
 3. **Retencao na fonte**: O calculo apresenta o IRS anual efetivo, nao a retencao mensal (que segue tabelas proprias da AT). O valor mensal e IRS anual / n.o meses.
 
-4. **Deducoes por dependentes**: Simplificacao - usa 726 EUR para todos em vez de 600/726/900 conforme a idade. Ver seccao 6 e 12.
+4. **Deducoes por dependentes**: A deducao de 900 EUR (2.o dependente <=6 anos, Art. 78-A n.o 2) nao esta implementada por falta de input especifico. Aplica 600 (>3 anos) e 726 (<=3 anos).
 
 ---
 
