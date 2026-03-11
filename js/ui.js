@@ -185,6 +185,7 @@ var L = {
     invoicing: 'Faturacao mensal', invoicingAnnual: 'Faturacao anual (12 meses)',
     taxableIncome: 'Rendimento tributavel (75%)', ss: 'Seguranca Social',
     ssAnnual: 'SS anual', netMonthly: 'Liquido Mensal', netAnnual: 'Liquido Anual',
+    grossAnnualSimple: 'Bruto Anual', netAnnualSimple: 'Liquido Anual',
   },
   en: {
     grossCard: 'Gross Monthly', netCard: 'Net Monthly',
@@ -207,6 +208,7 @@ var L = {
     invoicing: 'Monthly invoicing', invoicingAnnual: 'Annual invoicing (12 months)',
     taxableIncome: 'Taxable income (75%)', ss: 'Social Security',
     ssAnnual: 'SS annual', netMonthly: 'Net Monthly', netAnnual: 'Net Annual',
+    grossAnnualSimple: 'Gross Annual', netAnnualSimple: 'Net Annual',
   }
 };
 
@@ -347,6 +349,9 @@ function renderDepSimple(r) {
     html += sRow(t('transportSub'), '+ ' + fmt(r.transportMonthly), 'addition');
   html += '<hr>';
   html += sRow(t('totalNetMonthly'), fmt(r.totalNetMonthly), 'grand-total');
+  html += '<hr>';
+  html += sRow(t('grossAnnualSimple'), fmt(r.grossAnual), 'gross-row');
+  html += sRow(t('netAnnualSimple'), fmt(r.totalNetAnual), 'grand-total');
   $('simple-content').innerHTML = html;
   $('daily-notes-simple').innerHTML = buildDailyNotes(r, mealLabel);
 }
@@ -359,6 +364,9 @@ function renderIndSimple(r) {
   html += sRow(t('irs'), '- ' + fmt(r.irsMonthly), 'deduction');
   html += '<hr>';
   html += sRow(t('netMonthly'), fmt(r.netMonthly), 'grand-total');
+  html += '<hr>';
+  html += sRow(t('grossAnnualSimple'), fmt(r.grossAnual), 'gross-row');
+  html += sRow(t('netAnnualSimple'), fmt(r.netAnual), 'grand-total');
   $('simple-content').innerHTML = html;
   $('daily-notes-simple').innerHTML = '';
 }
