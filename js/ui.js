@@ -165,8 +165,9 @@ function renderDepDetailed(r) {
   html += row('Seguranca Social (11%)', '- ' + fmt(r.ssMonthly), 'deduction');
   html += row('IRS', '- ' + fmt(r.irsMonthly), 'deduction');
   html += row('Liquido base', fmt(r.netMonthlyBase), 'subtotal');
+  const mealLabel = r.mealType === 'card' ? 'Cartao' : 'Dinheiro';
   if (r.mealMonthlyClean > 0)
-    html += row('Sub. Alimentacao (isento)', '+ ' + fmt(r.mealMonthlyClean), 'addition');
+    html += row('Sub. Alimentacao (' + mealLabel + ')', '+ ' + fmt(r.mealMonthlyClean), 'addition');
   if (r.transportMonthly > 0)
     html += row('Sub. Transporte', '+ ' + fmt(r.transportMonthly), 'addition');
   html += row('<strong>Total Liquido Mensal</strong>', '<strong>' + fmt(r.totalNetMonthly) + '</strong>');
@@ -180,7 +181,7 @@ function renderDepDetailed(r) {
     html += row('&emsp;Desconto IRS Jovem', '- ' + fmt(r.jovemDiscount));
   html += row('Liquido anual (base)', fmt(r.netAnual), 'subtotal');
   if (r.mealAnnualClean > 0)
-    html += row('Sub. Alimentacao (11 meses)', '+ ' + fmt(r.mealAnnualClean), 'addition');
+    html += row('Sub. Alimentacao (' + mealLabel + ', 11 meses)', '+ ' + fmt(r.mealAnnualClean), 'addition');
   if (r.transportAnnual > 0)
     html += row('Sub. Transporte (11 meses)', '+ ' + fmt(r.transportAnnual), 'addition');
   html += row('<strong>Total Liquido Anual</strong>', '<strong>' + fmt(r.totalNetAnual) + '</strong>');
@@ -205,6 +206,15 @@ function renderDepDetailed(r) {
 
   $('warnings').innerHTML = r.warnings.map(w =>
     '<small class="warning">' + w + '</small>').join('');
+
+  // Daily notes
+  const travelRate = getDailyRate('workers', 'national');
+  let notes = '<small class="travel-info">';
+  if (r.mealPerDay > 0)
+    notes += 'Alimentacao: ' + fmt(r.mealPerDay) + '/dia (' + mealLabel + ')';
+  notes += ' &middot; Deslocacao: ' + fmt(travelRate) + '/dia (nacional)';
+  notes += '</small>';
+  $('daily-notes').innerHTML = notes;
 }
 
 // --- Render: Trabalho Independente ---
@@ -250,8 +260,9 @@ function renderDepSimple(r) {
   html += sRow('IRS', '- ' + fmt(r.irsMonthly), 'deduction');
   html += '<hr>';
   html += sRow('Liquido Base', fmt(r.netMonthlyBase), '');
+  const mealLabelS = r.mealType === 'card' ? 'Cartao' : 'Dinheiro';
   if (r.mealMonthlyClean > 0)
-    html += sRow('Sub. Alimentacao', '+ ' + fmt(r.mealMonthlyClean), 'addition');
+    html += sRow('Sub. Alimentacao (' + mealLabelS + ')', '+ ' + fmt(r.mealMonthlyClean), 'addition');
   if (r.transportMonthly > 0)
     html += sRow('Sub. Transporte', '+ ' + fmt(r.transportMonthly), 'addition');
   html += '<hr>';

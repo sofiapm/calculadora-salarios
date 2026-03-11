@@ -106,6 +106,7 @@ function calcDependente(input) {
     deducaoEsp, rc,
     irsMonthly, irs, jovemDiscount, depDeduction,
     netMonthlyBase, totalNetMonthly,
+    mealPerDay, mealType,
     mealMonthlyClean, mealMonthlyTotal, mealAnnualClean, mealAnnualTotal,
     transportMonthly, transportAnnual,
     netAnual, totalNetAnual,
