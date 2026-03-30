@@ -293,15 +293,51 @@ Todas as discrepancias identificadas foram corrigidas:
 
 ---
 
-## 14. Limitacoes Conhecidas
+## 14. Retencao na Fonte (Tabelas Mensais)
+
+A retencao mensal de IRS segue as tabelas oficiais publicadas no Despacho SEAF 2026-01-05-XXV (Despacho 233-A/2026).
+
+### Formula
+
+```
+Retencao = max(0, R x Taxa_marginal - Parcela_a_abater - Parcela_dep x n.o dependentes)
+```
+
+Onde `R` e a remuneracao mensal bruta.
+
+### Selecao de Tabela
+
+| Situacao | Tabela |
+|----------|--------|
+| Nao casado sem dependentes | Tabela I |
+| Casado dois titulares (com ou sem deps) | Tabela I |
+| Nao casado com 1+ dependentes | Tabela II |
+| Casado unico titular | Tabela III |
+
+### Regras Especiais
+
+- **3+ dependentes**: taxa marginal reduzida em 1 p.p., parcelas inalteradas
+- **Primeiros escaloes**: parcela a abater e variavel (formula dependente de R)
+- **IRS Jovem mensal**: desconto nao pode exceder `limite_isencao / 14` por mes
+
+### Diferenca entre Retencao e IRS Anual
+
+- **Retencao mensal**: aplicada pela entidade empregadora ao salario mensal (tabelas AT)
+- **IRS anual efetivo**: calculado na declaracao anual com escaloes do Art. 68.o CIRS
+- A calculadora usa as tabelas de retencao para os valores mensais (igual ao recibo de vencimento)
+
+**Fonte legal:** Despacho SEAF 2026-01-05-XXV (Despacho 233-A/2026, DR)
+- [Despacho 233-A/2026 - DRE](https://diariodarepublica.pt/dr/detalhe/despacho/233-a-2026-998488151)
+
+---
+
+## 15. Limitacoes Conhecidas
 
 1. **IRS Jovem**: Usa metodo proporcional (`irs * proporcao * taxa`) em vez de recalcular o IRS sobre o rendimento nao-isento. Pode haver ligeira sobreestimacao do desconto para rendimentos altos.
 
 2. **Regime simplificado**: Apenas coeficiente de 75% (prestacao de servicos). Nao inclui vendas (15%), alojamento local (35%) ou outras atividades.
 
-3. **Retencao na fonte**: O calculo apresenta o IRS anual efetivo, nao a retencao mensal (que segue tabelas proprias da AT). O valor mensal e IRS anual / n.o meses.
-
-4. **Deducoes por dependentes**: A deducao de 900 EUR (2.o dependente <=6 anos, Art. 78-A n.o 2) nao esta implementada por falta de input especifico. Aplica 600 (>3 anos) e 726 (<=3 anos).
+3. **Deducoes por dependentes**: A deducao de 900 EUR (2.o dependente <=6 anos, Art. 78-A n.o 2) nao esta implementada por falta de input especifico. Aplica 600 (>3 anos) e 726 (<=3 anos).
 
 ---
 
